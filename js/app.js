@@ -285,6 +285,47 @@ function signIn(){
 
 	// Forgot password
 	function forgotPassword(){
+		var verificationCode, newPassword, forgotUser;
+		console.log('Forgot Password');
+		bootbox.prompt("Enter username or email", function(result){
+			console.log("User: " + result);
+			forgotUser = result;
+			var userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+			var userData = {
+				Username : forgotUser,
+				Pool : userPool
+		  };
+			console.log("Creating user " + JSON.stringify(userData));
+		  cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+			cognitoUser.forgotPassword({
+	        onSuccess: function (data) {
+	            // successfully initiated reset password request
+		          console.log('CodeDeliveryData from forgotPassword: ' + data);
+	        },
+	        onFailure: function(err) {
+	            console.log(JSON.stringify(err.message));
+	        },
+	        //Optional automatic callback
+	        inputVerificationCode: function(data) {
+	            console.log('Code sent to: ' + JSON.stringify(data));
+							bootbox.prompt('Please input verification code', function(result){
+								verificationCode = result;
+								bootbox.prompt('Enter new password ', function(result){
+									newPassword = result;
+									cognitoUser.confirmPassword(verificationCode, newPassword, {
+			                onSuccess() {
+			                    console.log('Password confirmed!');
+													bootbox.alert('Password confirmed!');
+			                },
+			                onFailure(err) {
+			                    console.log(JSON.stringify(err.message));
+			                }
+			            });
+								});
+							});
+	        }
+	    });
+		});
 	}
 
 	// Get Cognito Sync token
