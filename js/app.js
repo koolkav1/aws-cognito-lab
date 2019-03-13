@@ -197,6 +197,37 @@ function signIn(){
 	}
 	// Sign Out
 	function signOut() {
+		if (cognitoUser != null) {
+			bootbox.confirm({
+				title: "Sign out",
+				message: "Do you want to also invalidate all user data on this device?",
+				buttons: {
+					cancel: {
+						label: '<i class="f fa-times"></i> No'
+					},
+					confirm: {
+						label: '<i class="f fa-check"></i> Yes'
+					}
+				},
+				callback: function (result) {
+					if (result) {
+						cognitoUser.globalSignOut({
+							onSuccess: function(result) {
+								bootbox.alert("Successfully signed out and  all app records");
+							},
+							onFailure: function(err) {
+								alert(JSON.stringify(err));
+							}
+						});
+					} else {
+						cognitoUser.signOut();
+						bootbox.alert("Signed out of app");
+					}
+				}
+			});
+		} else {
+			bootbox.alert("You are not signed in");
+		}
 	}
 
 	// Update profile
