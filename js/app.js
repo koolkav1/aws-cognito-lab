@@ -99,7 +99,7 @@
 					Value : $('#inputBirthdate').val()
 			},
 			{
-					Name : 'custom:linkedin',
+					Name : 'custom:custom:linkedin',
 					Value : $('#inputLinkedin').val()
 			}
 		];
@@ -131,9 +131,70 @@
 	}
 
 	// Sign In
-	function signIn(){
+function signIn(){
+		var authenticationData = {
+			Username : $('#inputUsername').val(), // Get username & password from modal
+			Password : $('#inputPassword2').val()
+	  };
+		$('#signInModal').modal("hide"); // Close the modal window
+	  var authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails(authenticationData);
+    var userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+	  var userData = {
+			Username : authenticationData.Username,
+			Pool : userPool
+	  };
+	  cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+	  cognitoUser.authenticateUser(authenticationDetails, {
+			onSuccess: function (result) {
+				createCredentials(result.getIdToken().getJwtToken());
+				console.log("Signed in successfully");
+	    },
+	    onFailure: function(err) {
+				if (err.message == '200'){  // 200 Success return
+					cognitoUser = userPool.getCurrentUser();
+					if (cognitoUser != null) {
+						cognitoUser.getSession(function (err, result) { // Get ID token from session
+			        if (err) {
+								alert(err);
+			        }
+			        if (result) {
+								createCredentials(result.getIdToken().getJwtToken());
+								console.log("Signed to CognitoID in successfully");
+			        }
+			    	});
+					}
+					else {
+						alert(JSON.stringify(err));
+					}
+				}
+				else {
+					alert(JSON.stringify(err));
+				}
+	    },
+	  });
 	}
 
+	function createCredentials(idToken) {
+		AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+			IdentityPoolId: identityPoolId,
+			Logins : {
+				// Change the key below according to your user pool and region.
+				'cognito-idp.eu-west-1.amazonaws.com/eu-west-1_5oo05nVIq' : idToken
+			}
+		});
+		//refreshes credentials using AWS.CognitoIdentity.getCredentialsForIdentity()
+		AWS.config.credentials.refresh((error) => {
+				if (error) {
+						 console.error(error);
+						 bootbox.alert('Unable to sign in. Please try again.')
+				} else {
+						 // Instantiate aws sdk service objects now that the credentials have been updated.
+						 // example: var s3 = new AWS.S3();
+						 console.log('Successfully logged!');
+						 bootbox.alert('You are now signed.');
+				}
+		});
+	}
 	// Sign Out
 	function signOut() {
 	}
