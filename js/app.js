@@ -328,8 +328,27 @@ function signIn(){
 		});
 	}
 
-	// Get Cognito Sync token
 	function getCognitoSynToken(){
+	  /* Other AWS SDKs will automatically use the Cognito Credentials provider */
+	  /* configured in the JavaScript SDK. */
+		var cognitoSyncToken, cognitoSyncCount;
+		identityId = AWS.config.credentials.identityId;
+	  cognitosync = new AWS.CognitoSync();
+	  cognitosync.listRecords({
+	    DatasetName: cognitoDatasetName, /* required */
+	    IdentityId: identityId,  /* required */
+	    IdentityPoolId: identityPoolId  /* required */
+	  }, function(err, data) {
+	    if (err) console.log("listRecords: " + err, err.stack); /* an error occurred */
+	      else {
+	        console.log("listRecords: " + JSON.stringify(data));
+	        cognitoSyncToken = data.SyncSessionToken;
+	        cognitoSyncCount = data.DatasetSyncCount;
+	        console.log("SyncSessionToken: " + cognitoSyncToken);           /* successful response */
+	        console.log("DatasetSyncCount: " + cognitoSyncCount);
+	        addRecord(cognitoSyncToken, cognitoSyncCount);
+	      }
+	  });
 	}
 
 	// Create an S3 object
