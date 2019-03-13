@@ -232,6 +232,55 @@ function signIn(){
 
 	// Update profile
 	function updateProfile(){
+		if (cognitoUser != null) {
+			console.log("Starting update process");
+			
+		var attributes = [
+			{
+				Name : 'given_name',
+				Value : $('#inputGivenName2').val()
+			},
+			{
+					Name : 'family_name',
+					Value : $('#inputFamilyName2').val()
+			},
+			{
+					Name : 'website',
+					Value : $('#inputWebsite2').val()
+			},
+			{
+					Name : 'gender',
+					Value : $('#inputGender2').val()
+			},
+			{
+					Name : 'birthdate',
+					Value : $('#inputBirthdate2').val()
+			},
+			{
+					Name : 'custom:custom:linkedin',
+					Value : $('#inputLinkedin2').val()
+			}
+		];
+
+		console.log("Adding attributes");
+		var attributeList = [];
+		for (var a= 0; a < attributes.length; a++) {
+			var attributeTemp = new AmazonCognitoIdentity.CognitoUserAttribute(attributes[a]);
+			attributeList.push(attributeTemp);
+		}
+		console.log("Updating profile");
+		$('#updateModal').modal("hide"); //Close the modal window
+		cognitoUser.updateAttributes(attributeList, function(err, result) {
+			if (err) {
+				alert(JSON.stringify(err.message));
+				return;
+			}
+			console.log("call result: " + JSON.stringify(result));
+			bootbox.alert("Successfully updated!");
+		});
+		} else {
+			bootbox.alert("You are not signed in!");
+		}
 	}
 
 	// Forgot password
