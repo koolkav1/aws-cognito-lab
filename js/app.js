@@ -45,12 +45,12 @@
 
 	// User pool
 	var poolData = {
-			UserPoolId : 'eu-west-1_5oo05nVIq', // Your user pool id here
-			ClientId : '6opfdeu0qn8khv3kogu7o1s3ua' // Your app client id here
+			UserPoolId : '', // Your user pool id here
+			ClientId : '' // Your app client id here
 	};
 
 	// Your identity pool id here
-	var identityPoolId = "eu-west-1:2d218a72-ae59-4bb9-872f-cc52408c7ea6"
+	var identityPoolId = "";
 
 	// Cognito Sync store name
 	var cognitoDatasetName = "backspace-users";
@@ -131,7 +131,7 @@
 	}
 
 	// Sign In
-function signIn(){
+	function signIn(){
 		var authenticationData = {
 			Username : $('#inputUsername').val(), // Get username & password from modal
 			Password : $('#inputPassword2').val()
@@ -179,7 +179,7 @@ function signIn(){
 			IdentityPoolId: identityPoolId,
 			Logins : {
 				// Change the key below according to your user pool and region.
-				'cognito-idp.eu-west-1.amazonaws.com/eu-west-1_5oo05nVIq' : idToken
+				'' : idToken
 			}
 		});
 		//refreshes credentials using AWS.CognitoIdentity.getCredentialsForIdentity()
@@ -195,6 +195,7 @@ function signIn(){
 				}
 		});
 	}
+
 	// Sign Out
 	function signOut() {
 		if (cognitoUser != null) {
@@ -230,58 +231,59 @@ function signIn(){
 		}
 	}
 
-	// Update profile
-	function updateProfile(){
-		if (cognitoUser != null) {
-			console.log("Starting update process");
-			
-		var attributes = [
-			{
-				Name : 'given_name',
-				Value : $('#inputGivenName2').val()
-			},
-			{
-					Name : 'family_name',
-					Value : $('#inputFamilyName2').val()
-			},
-			{
-					Name : 'website',
-					Value : $('#inputWebsite2').val()
-			},
-			{
-					Name : 'gender',
-					Value : $('#inputGender2').val()
-			},
-			{
-					Name : 'birthdate',
-					Value : $('#inputBirthdate2').val()
-			},
-			{
-					Name : 'custom:custom:linkedin',
-					Value : $('#inputLinkedin2').val()
+		// Update profile
+		function updateProfile(){
+			if (cognitoUser != null) {
+				console.log("Starting update process");
+				
+			var attributes = [
+				{
+					Name : 'given_name',
+					Value : $('#inputGivenName2').val()
+				},
+				{
+						Name : 'family_name',
+						Value : $('#inputFamilyName2').val()
+				},
+				{
+						Name : 'website',
+						Value : $('#inputWebsite2').val()
+				},
+				{
+						Name : 'gender',
+						Value : $('#inputGender2').val()
+				},
+				{
+						Name : 'birthdate',
+						Value : $('#inputBirthdate2').val()
+				},
+				{
+						Name : 'custom:custom:linkedin',
+						Value : $('#inputLinkedin2').val()
+				}
+			];
+	
+			console.log("Adding attributes");
+			var attributeList = [];
+			for (var a= 0; a < attributes.length; a++) {
+				var attributeTemp = new AmazonCognitoIdentity.CognitoUserAttribute(attributes[a]);
+				attributeList.push(attributeTemp);
 			}
-		];
-
-		console.log("Adding attributes");
-		var attributeList = [];
-		for (var a= 0; a < attributes.length; a++) {
-			var attributeTemp = new AmazonCognitoIdentity.CognitoUserAttribute(attributes[a]);
-			attributeList.push(attributeTemp);
-		}
-		console.log("Updating profile");
-		$('#updateModal').modal("hide"); //Close the modal window
-		cognitoUser.updateAttributes(attributeList, function(err, result) {
-			if (err) {
-				alert(JSON.stringify(err.message));
-				return;
+			console.log("Updating profile");
+			$('#updateModal').modal("hide"); //Close the modal window
+			cognitoUser.updateAttributes(attributeList, function(err, result) {
+				if (err) {
+					alert(JSON.stringify(err.message));
+					return;
+				}
+				console.log("call result: " + JSON.stringify(result));
+				bootbox.alert("Successfully updated!");
+			});
+			} else {
+				bootbox.alert("You are not signed in!");
 			}
-			console.log("call result: " + JSON.stringify(result));
-			bootbox.alert("Successfully updated!");
-		});
-		} else {
-			bootbox.alert("You are not signed in!");
 		}
-	}
+	
 
 	// Forgot password
 	function forgotPassword(){
@@ -351,10 +353,69 @@ function signIn(){
 	  });
 	}
 
-	// Create an S3 object
+function addRecord(cognitoSyncToken, cognitoSyncCount){
+	var params = {
+    DatasetName: cognitoDatasetName, /* required */
+    IdentityId: identityId, /* required */
+    IdentityPoolId: identityPoolId, /* required */
+    SyncSessionToken: cognitoSyncToken, /* required */
+    RecordPatches: [
+      {
+        Key: 'USER_ID', /* required */
+        Op: 'replace', /* required */
+        SyncCount: cognitoSyncCount, /* required */
+        Value: identityId
+      }
+    ]
+  };
+  console.log("UserID: " + identityId);
+  cognitosync.updateRecords(params, function(err, data) {
+    if (err) {
+			console.log("updateRecords: " + err, err.stack); /* an error occurred */
+		}
+    else {
+			console.log("Value: " + JSON.stringify(data));           /* successful response */
+		}
+  });
+}
+
 	function createObject(){
+		if (cognitoUser != null) {
+			console.log("Creating S3 object");
+			identityId = AWS.config.credentials.identityId;
+			var prefix = 'cognito/backspace-academy/' + identityId;
+			var key = prefix + '/' +  'test' + '.json';
+			console.log('Key: ' + key)
+			var data = {
+				'test': 'It worked!'
+			}
+			var temp = JSON.stringify(data);
+			var bucketName = 'backspace-lab-dev'; /* change to your bucket name!! */
+	    var objParams = {
+	        Bucket: bucketName,
+	        Key: key,
+	        ContentType: 'json',
+	        Body: temp
+	    };
+			// Save data to S3
+			var s3 = new AWS.S3({
+			    params: {
+			        Bucket: bucketName
+			    }
+			});
+			s3.putObject(objParams, function (err, data) {
+	        if (err) {
+	            console.log('Error saving to cloud: ' + err);
+	            alert('danger','Error.','Unable to save data to S3.');
+	        } else {
+	          alert('success','Finished','Data saved to S3.');
+	        }
+	    });
+
+		}
+		else {
+			bootbox.alert('You are not signed in!');
+		}
 	}
-
-
 // End 	self-invoking anonymous function
 })(jQuery);
